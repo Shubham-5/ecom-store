@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useCallback } from "react";
 
 const MOCK_DATA = [
   {
@@ -67,61 +66,9 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
   const [products, setProducts] = useState(MOCK_DATA);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedVariants, setSelectedVariants] = useState(new Map());
-  // const [page, setPage] = useState(0);
-  // const [loading, setLoading] = useState(false);
-  // const [hasMore, setHasMore] = useState(true);
-  // const observerTarget = useRef(null);
-
-  // const fetchProducts = useCallback(async () => {
-  //   if (loading || !hasMore) return;
-
-  //   setLoading(true);
-  //   try {
-  //     const response = await fetch(
-  //       `http://stageapi.monkcommerce.app/task/products/search?search=${searchQuery}&page=${page}&limit=10`,
-  //       {
-  //         headers: {
-  //           "x-api-key": import.meta.env.VITE_API_KEY || "",
-  //         },
-  //       }
-  //     );
-  //     const data = await response.json();
-
-  //     if (data.length < 10) {
-  //       setHasMore(false);
-  //     }
-
-  //     setProducts((prev) => [...prev, ...data]);
-  //     setPage((prev) => prev + 1);
-  //   } catch (error) {
-  //     console.error("Error fetching products:", error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, []);
-
-  // useEffect(() => {
-  //   const observer = new IntersectionObserver(
-  //     (entries) => {
-  //       if (entries[0].isIntersecting) {
-  //         fetchProducts();
-  //       }
-  //     },
-  //     { threshold: 1.0 }
-  //   );
-
-  //   if (observerTarget.current) {
-  //     observer.observe(observerTarget.current);
-  //   }
-
-  //   return () => observer.disconnect();
-  // }, [page, searchQuery]);
 
   useEffect(() => {
     if (open) {
-      // setProducts([]);
-      // setPage(0);
-      // setHasMore(true);
       setSelectedProducts(new Set());
       setSelectedVariants(new Map());
     }
@@ -130,8 +77,6 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
   const handleSearch = (value) => {
     setSearchQuery(value);
     setProducts([]);
-    // setPage(0);
-    // setHasMore(true);
   };
 
   const toggleProductSelection = (productId) => {
@@ -258,8 +203,6 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
               </div>
             </div>
           ))}
-          {/* <div ref={observerTarget} className="h-4" />
-          {loading && <div className="p-4 text-center">Loading...</div>} */}
         </div>
         <DialogFooter className="flex items-center">
           <p className="flex-1">{selectedProducts.size} products selected</p>
