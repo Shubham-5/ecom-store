@@ -66,6 +66,7 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState(MOCK_DATA);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
+  const [selectedVariants, setSelectedVariants] = useState(new Map());
   // const [page, setPage] = useState(0);
   // const [loading, setLoading] = useState(false);
   // const [hasMore, setHasMore] = useState(true);
@@ -122,6 +123,7 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
       // setPage(0);
       // setHasMore(true);
       setSelectedProducts(new Set());
+      setSelectedVariants(new Map());
     }
   }, [open]);
 
@@ -132,20 +134,73 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
     // setHasMore(true);
   };
 
-  const handleProductSelect = (productId) => {
-    const newSelected = new Set(selectedProducts);
-    if (newSelected.has(productId)) {
-      newSelected.delete(productId);
+  const toggleProductSelection = (productId) => {
+    const newSelectedProducts = new Set(selectedProducts);
+    const newSelectedVariants = new Map(selectedVariants);
+
+    if (newSelectedProducts.has(productId)) {
+      newSelectedProducts.delete(productId);
+      newSelectedProducts.delete(productId);
     } else {
-      newSelected.add(productId);
+      newSelectedProducts.add(productId);
+      const product = products.find((p) => p.id === productId);
+      const allVariantIds = new Set(
+        product.variants.map((variant) => variant.id)
+      );
+      newSelectedVariants.set(productId, allVariantIds);
     }
-    setSelectedProducts(newSelected);
+
+    setSelectedProducts(newSelectedProducts);
+    setSelectedVariants(newSelectedVariants);
+  };
+
+  const toggleVariantSelection = (variantId, productId) => {
+    setSelectedVariants((prev) => {
+      const newSelectedVariants = new Map(prev);
+
+      const productVariants = new Set(newSelectedVariants.get(productId) || []);
+
+      if (productVariants.has(variantId)) {
+        productVariants.delete(variantId);
+
+        if (productVariants.size === 0) {
+          newSelectedVariants.delete(productId);
+          setSelectedProducts((prevProducts) => {
+            const newProducts = new Set(prevProducts);
+            newProducts.delete(productId);
+            return newProducts;
+          });
+        } else {
+          newSelectedVariants.set(productId, productVariants);
+        }
+      } else {
+        productVariants.add(variantId);
+        newSelectedVariants.set(productId, productVariants);
+
+        setSelectedProducts((prevProducts) => {
+          const newProducts = new Set(prevProducts);
+          newProducts.add(productId);
+          return newProducts;
+        });
+      }
+
+      return newSelectedVariants;
+    });
+  };
+
+  const isVariantSelected = (variantId, productId) => {
+    return selectedVariants.get(productId)?.has(variantId) || false;
   };
 
   const handleSubmit = () => {
-    const selectedProductsList = products.filter((product) =>
-      selectedProducts.has(product.id)
-    );
+    const selectedProductsList = products
+      .filter((product) => selectedProducts.has(product.id))
+      .map((product) => ({
+        ...product,
+        variants: product.variants.filter((variant) =>
+          selectedVariants.get(product.id)?.has(variant.id)
+        ),
+      }));
     onProductsSelect(selectedProductsList);
     onOpenChange(false);
   };
@@ -167,35 +222,48 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
         </div>
         <div className="max-h-[400px] overflow-y-auto">
           {products.map((product) => (
-            <div
-              key={product.id}
-              className="flex items-center gap-4 border-b p-4"
-            >
-              <Checkbox
-                checked={selectedProducts.has(product.id)}
-                onCheckedChange={() => handleProductSelect(product.id)}
-              />
-              <img
-                src={product.image.src}
-                alt={product.title}
-                width={50}
-                height={50}
-                className="rounded-md object-cover"
-              />
-              <div className="flex-1">
-                <h4 className="font-medium">{product.title}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {product.variants.length} variants
-                </p>
+            <div key={product.id} className="flex flex-col gap-4 p-2">
+              <div className="flex items-center gap-x-4">
+                <Checkbox
+                  checked={selectedProducts.has(product.id)}
+                  onCheckedChange={() => toggleProductSelection(product.id)}
+                />
+                <img
+                  src={product.image.src}
+                  alt={product.title}
+                  width={50}
+                  height={50}
+                  className="rounded-md object-cover"
+                />
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">{product.title}</h4>
+                </div>
+              </div>
+              <div>
+                {product.variants.map((variant) => (
+                  <div
+                    key={variant.id}
+                    className="flex ml-12 items-center gap-x-4"
+                  >
+                    <Checkbox
+                      checked={isVariantSelected(variant.id, product.id)}
+                      onCheckedChange={() =>
+                        toggleVariantSelection(variant.id, product.id)
+                      }
+                    />
+                    <p className="text-sm flex-1">{variant.title}</p>
+                    <span> ${variant.price}</span>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
           {/* <div ref={observerTarget} className="h-4" />
           {loading && <div className="p-4 text-center">Loading...</div>} */}
         </div>
-        <DialogFooter>
-          <p>1 product selected</p>
-          <div className="flex items-center justify-end">
+        <DialogFooter className="flex items-center">
+          <p className="flex-1">{selectedProducts.size} products selected</p>
+          <div className="flex items-center justify-end gap-x-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
