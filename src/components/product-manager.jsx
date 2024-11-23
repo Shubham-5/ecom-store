@@ -25,14 +25,28 @@ import {
   Plus,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Input } from "./ui/input";
 
 const SortableProduct = ({
   product,
   onRemove,
   onToggleVariants,
+  onDiscountChange,
   expanded,
   children,
 }) => {
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [discount, setDiscount] = useState(
+    product?.discount || { type: "flat", value: 0 }
+  );
+
   const {
     attributes,
     listeners,
@@ -48,13 +62,19 @@ const SortableProduct = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleDiscountChange = (field, value) => {
+    const updatedDiscount = { ...discount, [field]: value };
+    setDiscount(updatedDiscount);
+    onDiscountChange(product.id, updatedDiscount);
+  };
+
   return (
     <div ref={setNodeRef} style={style}>
       <div className="flex items-center gap-x-2">
         <div {...attributes} {...listeners} className="cursor-grab">
           <GripVertical className="text-gray-400" size={20} />
         </div>
-        <div className="flex-1 border rounded-lg p-4 bg-white shadow-sm">
+        <div className="flex-1 border rounded-lg px-4 py-2 text-sm bg-white shadow-sm">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <span className="font-medium">{product.title}</span>
@@ -64,6 +84,41 @@ const SortableProduct = ({
             </button>
           </div>
         </div>
+
+        {!showDiscount && (
+          <button
+            onClick={() => setShowDiscount(!showDiscount)}
+            className="p-1 text-blue-500 hover:text-blue-700"
+          >
+            Add Discount
+          </button>
+        )}
+        {showDiscount && (
+          <div className="flex gap-2 items-center">
+            <Input
+              type="number"
+              value={discount.value}
+              onChange={(e) => handleDiscountChange("value", e.target.value)}
+              className="p-2 border rounded w-20"
+              placeholder="Value"
+            />
+
+            <Select
+              value={discount.type}
+              onValueChange={(value) => handleDiscountChange("type", value)}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="flat">Flat</SelectItem>
+                <SelectItem value="percentage">Percentage</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <button
           onClick={() => onRemove(product.id)}
           className="p-1 hover:text-red-500"
@@ -71,14 +126,16 @@ const SortableProduct = ({
           <X size={16} />
         </button>
       </div>
-      <button
-        onClick={() => onToggleVariants(product.id)}
-        className="p-1 flex items-center ml-auto hover:text-blue-500"
-      >
-        {expanded ? "Hide variants" : "Show variants"}
+      {product.variants?.length > 1 && (
+        <button
+          onClick={() => onToggleVariants(product.id)}
+          className="p-1 flex items-center ml-auto hover:text-blue-500"
+        >
+          {expanded ? "Hide variants" : "Show variants"}
 
-        {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-      </button>
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      )}
       {expanded && children}
     </div>
   );
@@ -139,7 +196,7 @@ const ProductManager = () => {
       ],
     },
   ]);
-
+  console.log(products);
   const [expandedProducts, setExpandedProducts] = useState({});
   const [activeId, setActiveId] = useState(null);
 
@@ -161,6 +218,14 @@ const ProductManager = () => {
 
   const removeProduct = (productId) => {
     setProducts(products.filter((p) => p.id !== productId));
+  };
+
+  const updateDiscount = (productId, discount) => {
+    setProducts(
+      products.map((product) =>
+        product.id === productId ? { ...product, discount } : product
+      )
+    );
   };
 
   const toggleVariants = (productId) => {
@@ -262,6 +327,7 @@ const ProductManager = () => {
                 key={product.id}
                 product={product}
                 onRemove={removeProduct}
+                onDiscountChange={updateDiscount}
                 onToggleVariants={toggleVariants}
                 expanded={expandedProducts[product.id]}
               >
