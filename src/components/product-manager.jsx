@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Input } from "./ui/input";
+import { ProductPicker } from "./product-picker";
 
 const SortableProduct = ({
   product,
@@ -41,6 +42,7 @@ const SortableProduct = ({
   onDiscountChange,
   expanded,
   children,
+  onEdit,
 }) => {
   const [showDiscount, setShowDiscount] = useState(false);
   const [discount, setDiscount] = useState(
@@ -79,19 +81,19 @@ const SortableProduct = ({
             <div className="flex-1">
               <span className="font-medium">{product.title}</span>
             </div>
-            <button className="p-1 hover:text-blue-500">
+            <button className="p-1 hover:text-blue-500" onClick={onEdit}>
               <Edit2 size={16} />
             </button>
           </div>
         </div>
 
         {!showDiscount && (
-          <button
+          <Button
+            variant="outline"
             onClick={() => setShowDiscount(!showDiscount)}
-            className="p-1 text-blue-500 hover:text-blue-700"
           >
             Add Discount
-          </button>
+          </Button>
         )}
         {showDiscount && (
           <div className="flex gap-2 items-center">
@@ -129,7 +131,7 @@ const SortableProduct = ({
       {product.variants?.length > 1 && (
         <button
           onClick={() => onToggleVariants(product.id)}
-          className="p-1 flex items-center ml-auto hover:text-blue-500"
+          className="p-1 flex gap-x-1 items-center ml-auto hover:text-blue-500 text-sm"
         >
           {expanded ? "Hide variants" : "Show variants"}
 
@@ -158,7 +160,11 @@ const SortableVariant = ({ variant, productId, onRemove }) => {
   };
 
   return (
-    <div className="flex items-center gap-x-2" ref={setNodeRef} style={style}>
+    <div
+      className="flex items-center gap-x-2 text-sm"
+      ref={setNodeRef}
+      style={style}
+    >
       <div {...attributes} {...listeners} className="cursor-grab">
         <GripVertical className="text-gray-400" size={16} />
       </div>
@@ -196,9 +202,11 @@ const ProductManager = () => {
       ],
     },
   ]);
-  console.log(products);
+
   const [expandedProducts, setExpandedProducts] = useState({});
   const [activeId, setActiveId] = useState(null);
+  const [isOpenProductPicker, setOpenProductPicker] = useState(false);
+  const [editingProductId, setEditingProductId] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -247,6 +255,22 @@ const ProductManager = () => {
         return product;
       })
     );
+  };
+
+  const openPicker = (id) => {
+    setEditingProductId(id);
+    setOpenProductPicker(true);
+  };
+
+  const handleProductSelection = (selectedProducts) => {
+    if (!editingProductId) return;
+
+    const index = products.findIndex((p) => p.id === editingProductId);
+    const updatedProducts = [...products];
+    updatedProducts.splice(index, 1, ...selectedProducts);
+    setProducts(updatedProducts);
+
+    setEditingProductId(null);
   };
 
   const handleDragStart = (event) => {
@@ -310,6 +334,10 @@ const ProductManager = () => {
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
+      <div className="flex font-medium justify-between items-center p-2 ">
+        <h3 className="flex-1 ml-6">Products</h3>
+        <h3 className="w-36">Discount</h3>
+      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -330,6 +358,7 @@ const ProductManager = () => {
                 onDiscountChange={updateDiscount}
                 onToggleVariants={toggleVariants}
                 expanded={expandedProducts[product.id]}
+                onEdit={() => openPicker(product.id)}
               >
                 {expandedProducts[product.id] && product.variants && (
                   <div className="mt-4 ml-8 space-y-2">
@@ -353,6 +382,12 @@ const ProductManager = () => {
           </div>
         </SortableContext>
       </DndContext>
+
+      <ProductPicker
+        open={isOpenProductPicker}
+        onOpenChange={() => setOpenProductPicker(false)}
+        onProductsSelect={(products) => handleProductSelection(products)}
+      />
 
       <Button
         onClick={addProduct}
