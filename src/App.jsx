@@ -1,5 +1,9 @@
-function App() {
-  return <></>;
-}
+import ProductManager from "./components/product-manager";
 
-export default App;
+export default function App() {
+  return (
+    <div className="container mx-auto py-10">
+      <ProductManager />
+    </div>
+  );
+}
