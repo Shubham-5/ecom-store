@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -6,207 +6,34 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  GripVertical,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Edit2,
-  Plus,
-} from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { Input } from "./ui/input";
 import { ProductPicker } from "./product-picker";
+import SortableProduct from "./sortable-product";
+import SortableVariant from "./sortable-variant";
 
-const SortableProduct = ({
-  product,
-  onRemove,
-  onToggleVariants,
-  onDiscountChange,
-  expanded,
-  children,
-  onEdit,
-}) => {
-  const [showDiscount, setShowDiscount] = useState(false);
-  const [discount, setDiscount] = useState(
-    product?.discount || { type: "flat", value: 0 }
-  );
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: `product-${product.id}` });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const handleDiscountChange = (field, value) => {
-    const updatedDiscount = { ...discount, [field]: value };
-    setDiscount(updatedDiscount);
-    onDiscountChange(product.id, updatedDiscount);
-  };
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <div className="flex items-center gap-x-2">
-        <div {...attributes} {...listeners} className="cursor-grab">
-          <GripVertical className="text-gray-400" size={20} />
-        </div>
-        <div className="flex-1 border rounded-lg px-4 py-2 text-sm bg-white shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <span className="font-medium">{product.title}</span>
-            </div>
-            <button className="p-1 hover:text-blue-500" onClick={onEdit}>
-              <Edit2 size={16} />
-            </button>
-          </div>
-        </div>
-
-        {!showDiscount && (
-          <Button
-            variant="outline"
-            onClick={() => setShowDiscount(!showDiscount)}
-          >
-            Add Discount
-          </Button>
-        )}
-        {showDiscount && (
-          <div className="flex gap-2 items-center">
-            <Input
-              type="number"
-              value={discount.value}
-              onChange={(e) => handleDiscountChange("value", e.target.value)}
-              className="p-2 border rounded w-20"
-              placeholder="Value"
-            />
-
-            <Select
-              value={discount.type}
-              onValueChange={(value) => handleDiscountChange("type", value)}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="flat">Flat</SelectItem>
-                <SelectItem value="percentage">Percentage</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <button
-          onClick={() => onRemove(product.id)}
-          className="p-1 hover:text-red-500"
-        >
-          <X size={16} />
-        </button>
-      </div>
-      {product.variants?.length > 1 && (
-        <button
-          onClick={() => onToggleVariants(product.id)}
-          className="p-1 flex gap-x-1 items-center ml-auto hover:text-blue-500 text-sm"
-        >
-          {expanded ? "Hide variants" : "Show variants"}
-
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-      )}
-      {expanded && children}
-    </div>
-  );
-};
-
-const SortableVariant = ({ variant, productId, onRemove }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: `variant-${variant.id}` });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      className="flex items-center gap-x-2 text-sm"
-      ref={setNodeRef}
-      style={style}
-    >
-      <div {...attributes} {...listeners} className="cursor-grab">
-        <GripVertical className="text-gray-400" size={16} />
-      </div>
-      <div className="flex-1 items-center gap-4 p-2 border rounded-lg">
-        <div className="flex-1">
-          <span>{variant.title}</span>
-        </div>
-      </div>
-      <button
-        onClick={() => onRemove(productId, variant.id)}
-        className="p-1 hover:text-red-500"
-      >
-        <X size={14} />
-      </button>
-    </div>
-  );
+const initialProduct = {
+  id: Date.now(),
+  title: "Select Product",
+  variants: [],
 };
 
 const ProductManager = () => {
-  const [products, setProducts] = useState([
-    {
-      id: 77,
-      title: "Fog Linen Chambray Towel - Beige Stripe",
-      variants: [
-        { id: 1, product_id: 77, title: "XS / Silver", price: "49" },
-        { id: 2, product_id: 77, title: "S / Silver", price: "49" },
-        { id: 3, product_id: 77, title: "M / Silver", price: "49" },
-      ],
-    },
-    {
-      id: 80,
-      title: "Orbit Terrarium - Large",
-      variants: [
-        { id: 64, product_id: 80, title: "Default Title", price: "109" },
-      ],
-    },
-  ]);
+  const [state, setState] = useState({
+    products: [initialProduct],
+    expandedProducts: {},
+    activeId: null,
+    isPickerOpen: false,
+    editingId: null,
+  });
 
-  const [expandedProducts, setExpandedProducts] = useState({});
-  const [activeId, setActiveId] = useState(null);
-  const [isOpenProductPicker, setOpenProductPicker] = useState(false);
-  const [editingProductId, setEditingProductId] = useState(null);
+  const { products, expandedProducts, isPickerOpen } = state;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -215,134 +42,171 @@ const ProductManager = () => {
     })
   );
 
-  const addProduct = () => {
-    const newProduct = {
-      id: Date.now(),
-      title: "New Product",
-      variants: [],
-    };
-    setProducts([...products, newProduct]);
+  const productOperations = {
+    add: useCallback(() => {
+      setState((prev) => ({
+        ...prev,
+        products: [...prev.products, { ...initialProduct, id: Date.now() }],
+      }));
+    }, []),
+
+    remove: useCallback((productId) => {
+      setState((prev) => ({
+        ...prev,
+        products: prev.products.filter((p) => p.id !== productId),
+        expandedProducts: {
+          ...prev.expandedProducts,
+          [productId]: undefined,
+        },
+      }));
+    }, []),
+
+    updateDiscount: useCallback((productId, discount) => {
+      setState((prev) => ({
+        ...prev,
+        products: prev.products.map((product) =>
+          product.id === productId ? { ...product, discount } : product
+        ),
+      }));
+    }, []),
+
+    toggleVariants: useCallback((productId) => {
+      setState((prev) => ({
+        ...prev,
+        expandedProducts: {
+          ...prev.expandedProducts,
+          [productId]: !prev.expandedProducts[productId],
+        },
+      }));
+    }, []),
+
+    removeVariant: useCallback((productId, variantId) => {
+      setState((prev) => ({
+        ...prev,
+        products: prev.products.map((product) =>
+          product.id === productId
+            ? {
+                ...product,
+                variants: product.variants.filter((v) => v.id !== variantId),
+              }
+            : product
+        ),
+      }));
+    }, []),
   };
 
-  const removeProduct = (productId) => {
-    setProducts(products.filter((p) => p.id !== productId));
+  const pickerOperations = {
+    open: useCallback((id) => {
+      setState((prev) => ({
+        ...prev,
+        isPickerOpen: true,
+        editingId: id,
+      }));
+    }, []),
+
+    close: useCallback(() => {
+      setState((prev) => ({
+        ...prev,
+        isPickerOpen: false,
+        editingId: null,
+      }));
+    }, []),
+
+    handleSelection: useCallback((selectedProducts) => {
+      setState((prev) => {
+        if (!prev.editingId) return prev;
+
+        const index = prev.products.findIndex((p) => p.id === prev.editingId);
+        if (index === -1) return prev;
+
+        const newProducts = [...prev.products];
+        newProducts.splice(index, 1, ...selectedProducts);
+
+        return {
+          ...prev,
+          products: newProducts,
+          editingId: null,
+          isPickerOpen: false,
+        };
+      });
+    }, []),
   };
 
-  const updateDiscount = (productId, discount) => {
-    setProducts(
-      products.map((product) =>
-        product.id === productId ? { ...product, discount } : product
-      )
-    );
-  };
+  const dndHandlers = {
+    onDragStart: useCallback((event) => {
+      setState((prev) => ({ ...prev, activeId: event.active.id }));
+    }, []),
 
-  const toggleVariants = (productId) => {
-    setExpandedProducts({
-      ...expandedProducts,
-      [productId]: !expandedProducts[productId],
-    });
-  };
+    onDragEnd: useCallback((event) => {
+      const { active, over } = event;
 
-  const removeVariant = (productId, variantId) => {
-    setProducts(
-      products.map((product) => {
-        if (product.id === productId) {
-          return {
-            ...product,
-            variants: product.variants.filter((v) => v.id !== variantId),
-          };
-        }
-        return product;
-      })
-    );
-  };
-
-  const openPicker = (id) => {
-    setEditingProductId(id);
-    setOpenProductPicker(true);
-  };
-
-  const handleProductSelection = (selectedProducts) => {
-    if (!editingProductId) return;
-
-    const index = products.findIndex((p) => p.id === editingProductId);
-    const updatedProducts = [...products];
-    updatedProducts.splice(index, 1, ...selectedProducts);
-    setProducts(updatedProducts);
-
-    setEditingProductId(null);
-  };
-
-  const handleDragStart = (event) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      setActiveId(null);
-      return;
-    }
-
-    const isProduct = active.id.toString().startsWith("product-");
-    const isVariant = active.id.toString().startsWith("variant-");
-
-    if (isProduct) {
-      const oldIndex = products.findIndex(
-        (p) => `product-${p.id}` === active.id
-      );
-      const newIndex = products.findIndex((p) => `product-${p.id}` === over.id);
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newProducts = [...products];
-        const [movedProduct] = newProducts.splice(oldIndex, 1);
-        newProducts.splice(newIndex, 0, movedProduct);
-        setProducts(newProducts);
+      if (!over || active.id === over.id) {
+        setState((prev) => ({ ...prev, activeId: null }));
+        return;
       }
-    } else if (isVariant) {
-      const productId = products.find((p) =>
-        p.variants.some((v) => `variant-${v.id}` === active.id)
-      )?.id;
 
-      if (productId) {
-        const product = products.find((p) => p.id === productId);
-        const oldIndex = product.variants.findIndex(
-          (v) => `variant-${v.id}` === active.id
-        );
-        const newIndex = product.variants.findIndex(
-          (v) => `variant-${v.id}` === over.id
-        );
+      setState((prev) => {
+        const newState = { ...prev, activeId: null };
+        const activeType = active.id.toString().split("-")[0];
 
-        if (oldIndex !== -1 && newIndex !== -1) {
-          const newProducts = products.map((p) => {
-            if (p.id === productId) {
-              const newVariants = [...p.variants];
-              const [movedVariant] = newVariants.splice(oldIndex, 1);
-              newVariants.splice(newIndex, 0, movedVariant);
-              return { ...p, variants: newVariants };
+        if (activeType === "product") {
+          const oldIndex = prev.products.findIndex(
+            (p) => `product-${p.id}` === active.id
+          );
+          const newIndex = prev.products.findIndex(
+            (p) => `product-${p.id}` === over.id
+          );
+
+          if (oldIndex !== -1 && newIndex !== -1) {
+            const newProducts = [...prev.products];
+            const [movedProduct] = newProducts.splice(oldIndex, 1);
+            newProducts.splice(newIndex, 0, movedProduct);
+            newState.products = newProducts;
+          }
+        } else if (activeType === "variant") {
+          const product = prev.products.find((p) =>
+            p.variants.some((v) => `variant-${v.id}` === active.id)
+          );
+
+          if (product) {
+            const oldIndex = product.variants.findIndex(
+              (v) => `variant-${v.id}` === active.id
+            );
+            const newIndex = product.variants.findIndex(
+              (v) => `variant-${v.id}` === over.id
+            );
+
+            if (oldIndex !== -1 && newIndex !== -1) {
+              newState.products = prev.products.map((p) => {
+                if (p.id === product.id) {
+                  const newVariants = [...p.variants];
+                  const [movedVariant] = newVariants.splice(oldIndex, 1);
+                  newVariants.splice(newIndex, 0, movedVariant);
+                  return { ...p, variants: newVariants };
+                }
+                return p;
+              });
             }
-            return p;
-          });
-          setProducts(newProducts);
+          }
         }
-      }
-    }
 
-    setActiveId(null);
+        return newState;
+      });
+    }, []),
   };
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
-      <div className="flex font-medium justify-between items-center p-2 ">
-        <h3 className="flex-1 ml-6">Products</h3>
+      <div className="flex font-medium justify-between items-center p-2">
+        <h3 className="flex-1 ml-6">Product</h3>
         <h3 className="w-36">Discount</h3>
       </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+        onDragStart={dndHandlers.onDragStart}
+        onDragEnd={dndHandlers.onDragEnd}
         modifiers={[restrictToVerticalAxis]}
       >
         <SortableContext
@@ -354,29 +218,30 @@ const ProductManager = () => {
               <SortableProduct
                 key={product.id}
                 product={product}
-                onRemove={removeProduct}
-                onDiscountChange={updateDiscount}
-                onToggleVariants={toggleVariants}
+                onRemove={productOperations.remove}
+                onDiscountChange={productOperations.updateDiscount}
+                onToggleVariants={productOperations.toggleVariants}
                 expanded={expandedProducts[product.id]}
-                onEdit={() => openPicker(product.id)}
+                onEdit={() => pickerOperations.open(product.id)}
               >
-                {expandedProducts[product.id] && product.variants && (
-                  <div className="mt-4 ml-8 space-y-2">
-                    <SortableContext
-                      items={product.variants.map((v) => `variant-${v.id}`)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {product.variants.map((variant) => (
-                        <SortableVariant
-                          key={variant.id}
-                          variant={variant}
-                          productId={product.id}
-                          onRemove={removeVariant}
-                        />
-                      ))}
-                    </SortableContext>
-                  </div>
-                )}
+                {expandedProducts[product.id] &&
+                  product.variants?.length > 0 && (
+                    <div className="mt-4 ml-8 space-y-2">
+                      <SortableContext
+                        items={product.variants.map((v) => `variant-${v.id}`)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {product.variants.map((variant) => (
+                          <SortableVariant
+                            key={variant.id}
+                            variant={variant}
+                            productId={product.id}
+                            onRemove={productOperations.removeVariant}
+                          />
+                        ))}
+                      </SortableContext>
+                    </div>
+                  )}
               </SortableProduct>
             ))}
           </div>
@@ -384,16 +249,16 @@ const ProductManager = () => {
       </DndContext>
 
       <ProductPicker
-        open={isOpenProductPicker}
-        onOpenChange={() => setOpenProductPicker(false)}
-        onProductsSelect={(products) => handleProductSelection(products)}
+        open={isPickerOpen}
+        onOpenChange={pickerOperations.close}
+        onProductsSelect={pickerOperations.handleSelection}
       />
 
       <Button
-        onClick={addProduct}
+        onClick={productOperations.add}
         className="mb-4 flex ml-auto mt-4 items-center gap-2"
       >
-        <Plus size={16} /> Add Product
+        Add Product
       </Button>
     </div>
   );
