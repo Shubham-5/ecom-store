@@ -196,10 +196,11 @@ const ProductManager = () => {
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <div className="flex font-medium justify-between items-center p-2">
+    <div className="p-4 max-w-3xl mx-auto space-y-4">
+      <h2 className="font-medium mb-4 text-lg">Add Products</h2>
+      <div className="flex font-medium justify-between items-center">
         <h3 className="flex-1 ml-6">Product</h3>
-        <h3 className="w-36">Discount</h3>
+        <h3 className="w-56">Discount</h3>
       </div>
 
       <DndContext
@@ -256,7 +257,8 @@ const ProductManager = () => {
 
       <Button
         onClick={productOperations.add}
-        className="mb-4 flex ml-auto mt-4 items-center gap-2"
+        variant="outline"
+        className="flex ml-auto mt-4 h-14 w-60"
       >
         Add Product
       </Button>

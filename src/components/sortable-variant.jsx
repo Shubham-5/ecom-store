@@ -27,8 +27,8 @@ const SortableVariant = ({ variant, productId, onRemove }) => {
       <div {...attributes} {...listeners} className="cursor-grab">
         <GripVertical className="text-gray-400" size={16} />
       </div>
-      <div className="flex-1 items-center gap-4 p-2 border rounded-lg">
-        <div className="flex-1">
+      <div className="flex-1 items-center gap-4 p-2 border rounded-2xl">
+        <div className="flex-1 px-2">
           <span>{variant.title}</span>
         </div>
       </div>
