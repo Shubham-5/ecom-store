@@ -199,7 +199,7 @@ const ProductManager = () => {
     <div className="p-4 max-w-3xl mx-auto space-y-4">
       <h2 className="font-medium mb-4 text-lg">Add Products</h2>
       <div className="flex font-medium justify-between items-center">
-        <h3 className="flex-1 ml-6">Product</h3>
+        <h3 className="flex-1 ml-12">Product</h3>
         <h3 className="w-56">Discount</h3>
       </div>
 
@@ -215,9 +215,10 @@ const ProductManager = () => {
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-4">
-            {products.map((product) => (
+            {products.map((product, i) => (
               <SortableProduct
                 key={product.id}
+                index={i}
                 product={product}
                 onRemove={productOperations.remove}
                 onDiscountChange={productOperations.updateDiscount}

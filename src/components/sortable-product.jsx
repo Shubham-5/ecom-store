@@ -13,6 +13,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 const SortableProduct = ({
+  index,
   product,
   onRemove,
   onToggleVariants,
@@ -50,8 +51,13 @@ const SortableProduct = ({
   return (
     <div ref={setNodeRef} style={style}>
       <div className="flex items-center gap-x-2">
-        <div {...attributes} {...listeners} className="cursor-grab">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab flex items-center gap-x-2"
+        >
           <GripVertical className="text-gray-400" size={20} />
+          <span>{index + 1}.</span>
         </div>
         <div className="flex-1 border rounded-lg px-4 py-2 text-sm bg-white shadow-sm">
           <div className="flex items-center gap-4">
