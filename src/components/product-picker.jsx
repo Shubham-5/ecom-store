@@ -86,7 +86,7 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
           newSelections.variants = new Map(prev.variants);
           newSelections.variants.set(
             productId,
-            new Set(product.variants.map((v) => v.id))
+            new Set(product?.variants?.map((v) => v.id))
           );
         }
 
@@ -127,6 +127,13 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
     });
   }, []);
 
+  const handleSearchProducts = (e) => {
+    setQuery(e.target.value);
+    setAllProducts([]);
+    setPage(1);
+    setHasMore(true);
+  };
+
   const handleSubmit = () => {
     const selectedProducts = products
       .filter((product) => selections.products.has(product.id))
@@ -164,15 +171,15 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
             onCheckedChange={() => handleProductSelect(product.id)}
           />
           <img
-            src={product.image.src}
+            src={`${product.image.src} + &quality=1`}
             alt={product.title}
             loading="lazy"
-            className="rounded-md object-cover aspect-square size-7"
+            className="rounded-md object-cover w-10 h-10"
           />
           <h4 className="font-medium text-sm flex-1">{product.title}</h4>
         </div>
         <div>
-          {product.variants.map((variant) =>
+          {product.variants?.map((variant) =>
             renderVariant(variant, product.id)
           )}
         </div>
@@ -194,12 +201,7 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
             placeholder="Search products..."
             type="search"
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setAllProducts([]);
-              setPage(1);
-              setHasMore(true);
-            }}
+            onChange={handleSearchProducts}
             className="pl-8"
           />
         </div>
