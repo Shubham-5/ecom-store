@@ -13,9 +13,11 @@ import { Input } from "@/components/ui/input";
 import { useGetProductList } from "@/hooks/useGetProductList";
 import { useCallback } from "react";
 import { useRef } from "react";
+import { debounce } from "@/lib/utils";
 
 export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
   const [query, setQuery] = useState("");
+  const [debounceQuery, setDebounceQuery] = useState("");
   const [page, setPage] = useState(1);
   const [allProducts, setAllProducts] = useState([]);
   const [hasMore, setHasMore] = useState(true);
@@ -24,11 +26,11 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
     variants: new Map(),
   });
 
-  const {
-    data: products = [],
-    loading,
-    error,
-  } = useGetProductList(query, page, open);
+  const { data: products = [], loading } = useGetProductList(
+    debounceQuery,
+    page,
+    open
+  );
 
   const scrollContainerRef = useRef(null);
 
@@ -127,11 +129,17 @@ export function ProductPicker({ open, onOpenChange, onProductsSelect }) {
     });
   }, []);
 
-  const handleSearchProducts = (e) => {
-    setQuery(e.target.value);
+  const debouncedSearch = debounce((query) => {
+    setDebounceQuery(query);
     setAllProducts([]);
     setPage(1);
     setHasMore(true);
+  }, 2300);
+
+  const handleSearchProducts = (e) => {
+    const queryText = e.target.value;
+    setQuery(queryText);
+    debouncedSearch(queryText);
   };
 
   const handleSubmit = () => {
