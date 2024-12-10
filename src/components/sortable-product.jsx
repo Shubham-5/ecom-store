@@ -104,14 +104,12 @@ const SortableProduct = ({
           </div>
         )}
 
-        {product?.length > 1 && (
-          <button
-            onClick={() => onRemove(product.id)}
-            className="p-1 hover:text-red-500"
-          >
-            <X size={16} />
-          </button>
-        )}
+        <button
+          onClick={() => onRemove(product.id)}
+          className="p-1 hover:text-red-500"
+        >
+          <X size={16} />
+        </button>
       </div>
       {product.variants?.length > 1 && (
         <button
